@@ -24,7 +24,7 @@ class CampaignAdmin(admin.ModelAdmin):
 class InflowAdmin(admin.ModelAdmin):
     """Configuration of the Django Admin Interface."""
     date_hierarchy = 'created_at'
-    raw_id_fields = ('campaign', )
+    #raw_id_fields = ('campaign', )
     
 
 # register admin classes

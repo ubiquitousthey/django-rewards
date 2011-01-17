@@ -32,7 +32,10 @@ class Campaign(models.Model):
     def __unicode__(self):
         """Return a Unicode/String representation of the Object."""
         return u"Campaign %s" % (self.designator)
-    
+
+    def _get_inflow_set(self):
+        return Inflow.objects.filter(campaign_designator=self.designator)
+    inflow_set = property(_get_inflow_set)
 
 def campaign_post_save(signal, sender, instance, **kwargs):
     """Generate a designator"""
@@ -53,8 +56,11 @@ class Inflow(models.Model):
     campaign_designator = models.CharField(max_length=28, db_index=True)
     ip_address = models.IPAddressField()
     user_agent = models.CharField(max_length=255)
-    referer = models.CharField(max_length=255)
+    referrer = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __unicode__(self):
+        return '{0} - {1} - {2}'.format(self.campaign_designator, self.referrer, self.created_at)
 
 
 class Conversion(models.Model):
@@ -64,11 +70,13 @@ class Conversion(models.Model):
     text = models.CharField(max_length=255)
     ip_address = models.IPAddressField()
     user_agent = models.CharField(max_length=255)
-    referer = models.CharField(max_length=255)
+    referrer = models.CharField(max_length=255)
     status = models.CharField(max_length=32, choices=CONVERSION_STATUS_CHOICES,
                               default=CONVERSION_STATUS_CHOICES[0][0])
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+    def __unicode__(self):
+        return '{0} - {1} - {2} - {3} - {4}'.format(self.campaign.designator,self.reference, self.status, self.value, self.text)
 
 
     
