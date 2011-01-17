@@ -8,6 +8,7 @@
 # Copyright (c) 2010 HUDORA. All rights reserved.
 
 from setuptools import setup, find_packages
+import codecs
 
 setup(name='django-rewards',
       maintainer='Maximillian Dornseif',
