@@ -10,7 +10,11 @@ import base64
 import hashlib
 import random
 import time
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db import transaction
 from rewards.tools import get_ip
 
 
@@ -23,6 +27,7 @@ class Campaign(models.Model):
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    commission = models.DecimalField(max_digits=4,decimal_places=3,default=.100)
     
     class Meta:
         """Additional imformation for the ORM."""
@@ -65,7 +70,8 @@ class Inflow(models.Model):
 
 class Conversion(models.Model):
     campaign = models.ForeignKey(Campaign, to_field='designator')
-    value = models.IntegerField(blank=True, null=True)
+    value = models.DecimalField(max_digits=13,decimal_places=2)
+    amount = models.DecimalField(max_digits=13,decimal_places=2) #This is the commission amount
     reference = models.CharField(max_length=64, blank=True, default='', db_index=True)
     text = models.CharField(max_length=255)
     ip_address = models.IPAddressField()
@@ -75,9 +81,93 @@ class Conversion(models.Model):
                               default=CONVERSION_STATUS_CHOICES[0][0])
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
 
+
+    @staticmethod
+    def create_from_inflow(inflow, value, reference, text):
+        campaign = Campaign.objects.get(designator=inflow.campaign_designator)
+        conversion = Conversion.objects.create(
+            campaign=campaign,
+            value=value,
+            amount=value * campaign.commission,
+            reference=reference,
+            text=text,
+            ip_address=inflow.ip_address,
+            referrer=inflow.referrer,
+            user_agent=inflow.user_agent
+        )
+        return conversion
+
+
+    def clean(self):
+        if amount < 0:
+            raise ValidationError("Conversion amounts must be more than zero.")
+
     def __unicode__(self):
         return '{0} - {1} - {2} - {3} - {4}'.format(self.campaign.designator,self.reference, self.status, self.value, self.text)
 
 
+class Account(models.Model):
+    user = models.OneToOneField(User)
+    balance = models.DecimalField(max_digits=13, decimal_places=2)
+    updated_datetime = models.DateTimeField(auto_now=True)
+
+    def __unicode__(self):
+        return self.user.username + "\t" + str(self.balance)
+
+class Activity(models.Model):
+    account = models.ForeignKey(Account)
+    amount = models.DecimalField(max_digits=13, decimal_places=2)
+    datetime = models.DateTimeField(auto_now_add=True)
+    content_type = models.ForeignKey(ContentType)
+    reference = models.IntegerField()
+
+    def __unicode__(self):
+        return self.account.user.username + "\t" + str(self.amount)
+
+    @staticmethod
+    def create_from_ref(user, reference, **save_kargs):
+        activity = Activity()
+        try:
+            account = Account.objects.get(user=user)
+        except Account.DoesNotExist:
+            account = Account.objects.create(user=user, balance=0)
+        activity.account = account
+        activity.amount = reference.amount
+        activity.content_type = ContentType.objects.get_for_model(type(reference))
+        activity.reference = reference.pk
+        return activity.save(**save_kargs)
+
+    def save(self, *args, **kargs):
+        db=None
+        if 'using' in kargs:
+            db = kargs['using']
+        transaction.enter_transaction_management(using=db)
+        activity = super(Activity,self).save(*args, **kargs)
+        self.account.balance += self.amount
+        self.account.save(**kargs)
+        transaction.commit(using=db)
+        return activity
+
+
+class Check(models.Model):
+    number = models.IntegerField()
+    amount = models.DecimalField(max_digits=13,decimal_places=2)
+    payee = models.CharField(max_length=30)
+    date = models.DateField(auto_created=True)
+    creator = models.ForeignKey(User)
+
+    def clean(self):
+        if self.amount < 0:
+            raise ValidationError('Check amounts must be more than zero.')
+
+
+class ReversedConversion(models.Model):
+    amount = models.DecimalField(max_digits=13,decimal_places=2)
+    original_conversion = models.ForeignKey(Conversion)
+    date = models.DateField(auto_created=True)
+
+    def clean(self):
+        if amount < 0:
+            raise  ValidationError('Reversed conversions must be less than zero.')
     
     
