@@ -56,7 +56,7 @@ class RewardsMiddleware(object):
 
     def process_response(self,request, response):
         if request.is_ajax():
-            return
+            return response
 
         try:
             if not AFFILIATE_COOKIE in request.COOKIES:
