@@ -10,11 +10,13 @@ import base64
 import hashlib
 import random
 import time
+from django.conf.urls.defaults import url
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db import transaction
+from django.core.cache import cache
 from rewards.tools import get_ip
 
 
@@ -36,21 +38,27 @@ class Campaign(models.Model):
     
     def __unicode__(self):
         """Return a Unicode/String representation of the Object."""
-        return u"Campaign %s" % (self.designator)
+        return u"Campaign {0}".format(self.designator)
 
     def _get_inflow_set(self):
         return Inflow.objects.filter(campaign_designator=self.designator)
     inflow_set = property(_get_inflow_set)
 
-def campaign_post_save(signal, sender, instance, **kwargs):
-    """Generate a designator"""
-    if not instance.designator:
-        chash = hashlib.md5("%f-%f-%d" % (random.random(), time.time(), instance.id))
-        instance.designator = "dc%s" % base64.b32encode(chash.digest()).rstrip('=')
-        instance.save()
+    @staticmethod
+    def get_cache_key(campaign_designator):
+        ct = ContentType.objects.get_for_model(Campaign)
+        slug = '{0}:{1}'.format(ct.app_label,ct.model)
+        key = '{0}:{1}'.format(slug,campaign_designator)
+        return key
 
+    def save(self, *args, **kwargs):
+        if not self.designator:
+            chash = hashlib.md5("%f-%f-%d" % (random.random(), time.time(), self.id))
+            self.designator = "dc%s" % base64.b32encode(chash.digest()).rstrip('=')
 
-models.signals.post_save.connect(campaign_post_save, Campaign)
+        key = Campaign.get_cache_key(self.designator)
+        cache.delete(key)
+        return super(Campaign, self).save(*args, **kargs)
 
 
 class Inflow(models.Model):
