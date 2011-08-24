@@ -30,6 +30,7 @@ class Campaign(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     commission = models.DecimalField(max_digits=4,decimal_places=3,default=.100)
+    user = models.ForeignKey(User,blank=True,null=True)
     
     class Meta:
         """Additional imformation for the ORM."""
@@ -60,7 +61,6 @@ class Campaign(models.Model):
         cache.delete(key)
         return super(Campaign, self).save(*args, **kargs)
 
-
 class Inflow(models.Model):
     # this has the potential to get an ugly DB bottleneck, so we vo not use something which enforces
     # referential intigrity, like
@@ -74,7 +74,6 @@ class Inflow(models.Model):
 
     def __unicode__(self):
         return '{0} - {1} - {2}'.format(self.campaign_designator, self.referrer, self.created_at)
-
 
 class Conversion(models.Model):
     campaign = models.ForeignKey(Campaign, to_field='designator')
@@ -113,6 +112,7 @@ class Conversion(models.Model):
     def __unicode__(self):
         return '{0} - {1} - {2} - {3} - {4}'.format(self.campaign.designator,self.reference, self.status, self.value, self.text)
 
+User.rewards_account = property(lambda user:Account.objects.get(user=user))
 
 class Account(models.Model):
     user = models.OneToOneField(User)

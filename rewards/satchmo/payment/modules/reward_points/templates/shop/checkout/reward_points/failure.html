@@ -1,0 +1,15 @@
+{% extends "shop/base.html" %}
+{% load i18n %}
+
+{% block navbar %}
+   <li class="first"><a href="{{ shop_base }}/">{% trans "Home" %}</a></li>
+   <li>{% trans "Checkout" %}</li>
+{% endblock %}
+
+{% block content %}
+<div id="orderfailure">
+<h4>{% trans "Point Redeption Failed" %}</h4>
+<p>{% trans 'Unfortunately you do not have enough points for the selected items.  '%}
+ <a href="{% url satchmo_cart %}">{% trans 'Review your cart' %}</a> {% trans 'to remove items or ' %} <a href="{% url promotion_tools %}">{% trans 'use the tools' %} </a>  {% trans 'to promot TexasWideOpen.com for more points.' %}</p>
+</div>
+{% endblock %}

@@ -5,6 +5,24 @@
 from rewards.models import Campaign, Inflow, Conversion, CONVERSION_STATUS_CHOICES
 from rewards.tools import get_ip
 
+__version_info__ = {
+    'major' : 0,
+    'minor' : 0,
+    'micro' : 0,
+    'releaselevel' : 'alpha',
+    'serial' : 1
+}
+
+def get_version(short=False):
+    vers = ["%(major)i.%(minor)i" % __version_info__, ]
+
+    if __version_info__['micro']:
+        vers.append(".%(micro)i" % __version_info__)
+    if __version_info__['releaselevel'] != 'final' and not short:
+        vers.append('%(releaselevel)s%(serial)i' % __version_info__)
+    return ''.join(vers)
+
+__version__ = get_version()
 
 def regcon(campaign_designator, value, reference='', text='', ip_address='', user_agent='', referer=''):
     campaign = Campaign.objects.get(designator=campaign_designator)
