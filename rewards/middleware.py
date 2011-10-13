@@ -66,8 +66,6 @@ class RewardsMiddleware(object):
                 campaign = Campaign.objects.get(designator=campaign_designator)
                 cache.set(key,campaign)
         except Campaign.DoesNotExist:
-            if campaign_from_path:
-                raise Http404
             return
 
         request.session[AFFILIATE_SESSION_VAR] = campaign_designator
