@@ -59,7 +59,7 @@ class Campaign(models.Model):
 
         key = Campaign.get_cache_key(self.designator)
         cache.delete(key)
-        return super(Campaign, self).save(*args, **kargs)
+        return super(Campaign, self).save(*args, **kwargs)
 
 class Inflow(models.Model):
     # this has the potential to get an ugly DB bottleneck, so we vo not use something which enforces
